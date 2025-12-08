@@ -1,7 +1,14 @@
 package main
 
-import "fmt"
+import (
+	"net/http"
+)
 
 func main() {
-	fmt.Println("boot.dev Golang Server Project")
+	mux := http.NewServeMux()
+	server := http.Server{
+		Handler: mux,
+		Addr:    ":8080",
+	}
+	server.ListenAndServe()
 }
