@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"sync/atomic"
 )
@@ -22,7 +23,7 @@ func main() {
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 	}
-
+	fmt.Println("Server is running")
 	mux := http.NewServeMux()
 	mux.Handle("/app/", http.StripPrefix("/app", apiCfg.middlewareMetricsInc(http.FileServer(http.Dir(fileSep)))))
 	mux.HandleFunc("GET /api/healthz", handlerHealthz)
