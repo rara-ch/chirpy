@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 )
 
 func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +28,38 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(400)
 		w.Write([]byte(`{"error":"Chirp is too long"}`))
 	} else {
+		type returnVals struct {
+			CleanedBody string `json:"cleaned_body"`
+		}
+		responseBody := returnVals{
+			CleanedBody: RemoveProfane(params.Chirp),
+		}
+		dat, err := json.Marshal(responseBody)
+		if err != nil {
+			log.Printf("Error marshalling response: %s", err)
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"something went wrong"}`))
+			return
+		}
 		w.WriteHeader(200)
-		w.Write([]byte(`{"valid":true}`))
+		w.Write(dat)
 	}
+}
+
+func RemoveProfane(chirp string) string {
+	profaneWords := map[string]bool{
+		"KERFUFFLE": true,
+		"SHARBERT":  true,
+		"FORNAX":    true,
+	}
+
+	chirpTokens := strings.Split(chirp, " ")
+
+	for index, token := range chirpTokens {
+		if _, ok := profaneWords[strings.ToUpper(token)]; ok {
+			chirpTokens[index] = "****"
+		}
+	}
+
+	return strings.Join(chirpTokens, " ")
 }
