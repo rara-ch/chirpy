@@ -1,13 +1,21 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"sync/atomic"
+
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
+	"github.com/rara-ch/chirpy/internal/database"
 )
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
+	dbQueries      *database.Queries
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -18,10 +26,20 @@ func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 }
 
 func main() {
+	godotenv.Load()
+
+	db, err := sql.Open("postgres", os.Getenv("DB_URL"))
+	if err != nil {
+		log.Fatalf("could not open db connection: %v", err)
+	}
+
+	dbQueries := database.New(db)
+
 	const fileSep = "."
 	const port = "8080"
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
+		dbQueries:      dbQueries,
 	}
 	fmt.Println("Server is running")
 	mux := http.NewServeMux()
