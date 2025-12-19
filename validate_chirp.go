@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+// TODO: Check if responseWithError works properly
+
 func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
@@ -19,8 +21,7 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&params)
 	if err != nil {
 		log.Printf("Error decoding paramters: %s", err)
-		w.WriteHeader(500)
-		w.Write([]byte(`{"error":"something went wrong"}`))
+		respondWithError(w, 500, "error decoding request body")
 		return
 	}
 
@@ -37,8 +38,7 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 		dat, err := json.Marshal(responseBody)
 		if err != nil {
 			log.Printf("Error marshalling response: %s", err)
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"something went wrong"}`))
+			respondWithError(w, 500, "error marshalling response")
 			return
 		}
 		w.WriteHeader(200)
