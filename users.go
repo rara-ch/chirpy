@@ -16,6 +16,7 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Token     string    `json:"token"`
 }
 
 func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
@@ -77,8 +78,9 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	// TODO: DRY the below code
 
 	type parameters struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email            string `json:"email"`
+		Password         string `json:"password"`
+		ExpiresInSeconds int    `json:"expires_in_seconds"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -105,11 +107,19 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if isMatch {
+		token, err := auth.MakeJWT(user.ID, cfg.signiture, setJWTExpiresIn(params.ExpiresInSeconds))
+		if err != nil {
+			// FIXME: Should this be 500 status code
+			w.WriteHeader(401)
+			w.Write([]byte(`{"message": "Incorrect email or password"}`))
+		}
+
 		responseBody := User{
 			ID:        user.ID,
 			CreatedAt: user.CreatedAt,
 			UpdatedAt: user.UpdatedAt,
 			Email:     user.Email,
+			Token:     token,
 		}
 
 		dat, err := json.Marshal(responseBody)
@@ -123,4 +133,12 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		w.Write(dat)
 	}
 
+}
+
+func setJWTExpiresIn(inputSeconds int) time.Duration {
+	if inputSeconds <= 0 || 60 < inputSeconds {
+		return 1 * time.Hour
+	} else {
+		return time.Duration(inputSeconds) * time.Second
+	}
 }

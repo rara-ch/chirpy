@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rara-ch/chirpy/internal/auth"
 	"github.com/rara-ch/chirpy/internal/database"
 )
 
@@ -22,14 +23,23 @@ type chirpResponseBody struct {
 func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		w.WriteHeader(401)
+	}
+	userID, err := auth.ValidateJWT(token, cfg.signiture)
+	if err != nil {
+		w.WriteHeader(401)
+	}
+
 	type parameters struct {
-		Chirp  string    `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
+		Chirp string `json:"body"`
+		// UserID uuid.UUID `json:"user_id"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		log.Printf("error decoding parameters: %v", err)
 		respondWithError(w, 500, "error decoding parameters")
@@ -44,7 +54,7 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 
 		chirp, err := cfg.dbQueries.CreateChirp(r.Context(), database.CreateChirpParams{
 			Body:   cleanedChirp,
-			UserID: params.UserID,
+			UserID: userID,
 		})
 
 		if err != nil {

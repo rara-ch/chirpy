@@ -17,6 +17,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries      *database.Queries
 	platform       string
+	signiture      string
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -38,6 +39,7 @@ func main() {
 
 	dbQueries := database.New(db)
 	platform := os.Getenv("PLATFORM")
+	signiture := os.Getenv("SECRET")
 
 	const fileSep = "."
 	const port = "8080"
@@ -45,6 +47,7 @@ func main() {
 		fileserverHits: atomic.Int32{},
 		dbQueries:      dbQueries,
 		platform:       platform,
+		signiture:      signiture,
 	}
 	fmt.Println("Server is running")
 	mux := http.NewServeMux()
