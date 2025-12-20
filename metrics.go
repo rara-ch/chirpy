@@ -22,7 +22,12 @@ func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
+	if cfg.platform != "dev" {
+		w.WriteHeader(403)
+		w.Write([]byte("Forbidden"))
+	}
 	cfg.fileserverHits.Store(0)
+	cfg.dbQueries.ResetUsers(r.Context())
 	w.WriteHeader(200)
 	w.Write([]byte("OK"))
 }

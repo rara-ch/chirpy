@@ -16,6 +16,7 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries      *database.Queries
+	platform       string
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -28,25 +29,31 @@ func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 func main() {
 	godotenv.Load()
 
-	db, err := sql.Open("postgres", os.Getenv("DB_URL"))
+	conString := os.Getenv("DB_URL")
+
+	db, err := sql.Open("postgres", conString)
 	if err != nil {
 		log.Fatalf("could not open db connection: %v", err)
 	}
 
 	dbQueries := database.New(db)
+	platform := os.Getenv("PLATFORM")
 
 	const fileSep = "."
 	const port = "8080"
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 		dbQueries:      dbQueries,
+		platform:       platform,
 	}
 	fmt.Println("Server is running")
 	mux := http.NewServeMux()
 	mux.Handle("/app/", http.StripPrefix("/app", apiCfg.middlewareMetricsInc(http.FileServer(http.Dir(fileSep)))))
 	mux.HandleFunc("GET /api/healthz", handlerHealthz)
 	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
-	mux.HandleFunc("GET /admin/metrics", (apiCfg.handlerMetrics))
+	mux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser)
+
+	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 
 	server := http.Server{
